@@ -1,22 +1,17 @@
-﻿FROM mcr.microsoft.com/dotnet/aspnet:7.0 AS base
-WORKDIR /app
-EXPOSE 80
-EXPOSE 443
-
+﻿# Use the .NET SDK image to build the app
 FROM mcr.microsoft.com/dotnet/sdk:7.0 AS build
-ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
-COPY ["CategoryModule/CategoryModule.csproj", "CategoryModule/"]
+COPY ["CategoryModule.csproj", "./CategoryModule/"]
 RUN dotnet restore "CategoryModule/CategoryModule.csproj"
-COPY . .
-WORKDIR "/src/CategoryModule"
-RUN dotnet build "CategoryModule.csproj" -c $BUILD_CONFIGURATION -o /app/build
+COPY . ./CategoryModule
+WORKDIR /src/CategoryModule
+RUN dotnet build "CategoryModule.csproj" -c Release -o /app/build
+RUN dotnet publish "CategoryModule.csproj" -c Release -o /app/publish /p:UseAppHost=false
 
-FROM build AS publish
-ARG BUILD_CONFIGURATION=Release
-RUN dotnet publish "CategoryModule.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
-
-FROM base AS final
+# Use the ASP.NET runtime image to run the app
+FROM mcr.microsoft.com/dotnet/aspnet:7.0 AS base
 WORKDIR /app
-COPY --from=publish /app/publish .
-ENTRYPOINT ["dotnet", "CategoryModule.dll"]
+COPY entrypoint.sh ./
+RUN chmod +x ./entrypoint.sh
+COPY --from=build /app/publish .
+RUN apt-get update && apt-get install -y postgresql-client

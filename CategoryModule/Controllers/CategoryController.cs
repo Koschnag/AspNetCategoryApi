@@ -6,10 +6,12 @@ namespace CategoryModule.Controllers;
 [Route("[controller]")]
 public class CategoryController : ControllerBase
 {
+    private readonly ApplicationDbContext _context;
     private readonly ILogger<CategoryController> _logger;
 
-    public CategoryController(ILogger<CategoryController> logger)
+    public CategoryController(ApplicationDbContext context, ILogger<CategoryController> logger)
     {
+        _context = context;
         _logger = logger;
     }
 
@@ -29,8 +31,10 @@ public class CategoryController : ControllerBase
     }
 
     [HttpPost(Name = "CreateCategory")]
-    public IActionResult Post([FromBody] Category category)
+    public async Task<IActionResult> Post([FromBody] Category category)
     {
-        return CreatedAtRoute("GetCategories", new {id = category.Id}, category);
+        _context.Categories.Add(category);
+        await _context.SaveChangesAsync();
+        return Ok();
     }
 }
